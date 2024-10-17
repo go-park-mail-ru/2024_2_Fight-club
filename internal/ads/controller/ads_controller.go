@@ -34,10 +34,28 @@ func (h *AdHandler) GetAllPlaces(w http.ResponseWriter, r *http.Request) {
 		zap.String("request_id", requestID),
 		zap.String("method", r.Method),
 		zap.String("url", r.URL.String()),
+		zap.String("query", r.URL.Query().Encode()),
 	)
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	places, err := h.adUseCase.GetAllPlaces(r.Context())
+
+	queryParams := r.URL.Query()
+
+	location := queryParams.Get("location")
+	rating := queryParams.Get("rating")
+	newThisWeek := queryParams.Get("new")
+	hostGender := queryParams.Get("gender")
+	guestCounter := queryParams.Get("guests")
+
+	filter := domain.AdFilter{
+		Location:    location,
+		Rating:      rating,
+		NewThisWeek: newThisWeek,
+		HostGender:  hostGender,
+		GuestCount:  guestCounter,
+	}
+
+	places, err := h.adUseCase.GetAllPlaces(r.Context(), filter)
 	if err != nil {
 		h.handleError(w, err, requestID)
 		return
@@ -172,10 +190,9 @@ func (h *AdHandler) UpdatePlace(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err, requestID)
 		return
 	}
-	body := map[string]interface{}{
-		"place": place,
-	}
-	if err := json.NewEncoder(w).Encode(body); err != nil {
+	w.WriteHeader(http.StatusOK)
+	updateResponse := map[string]string{"response": "Update successfully"}
+	if err := json.NewEncoder(w).Encode(updateResponse); err != nil {
 		logger.AccessLogger.Error("Failed to encode response", zap.String("request_id", requestID), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -258,6 +275,10 @@ func (h *AdHandler) GetPlacesPerCity(w http.ResponseWriter, r *http.Request) {
 		zap.Duration("duration", duration),
 		zap.Int("status", http.StatusOK),
 	)
+}
+
+func (h *AdHandler) SearchPlace(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func (h *AdHandler) handleError(w http.ResponseWriter, err error, requestID string) {

@@ -18,8 +18,16 @@ type Ad struct {
 	Requests        []Request          `gorm:"foreignKey:AdID" json:"requests"`
 }
 
+type AdFilter struct {
+	Location    string
+	Rating      string
+	NewThisWeek string
+	HostGender  string
+	GuestCount  string
+}
+
 type AdRepository interface {
-	GetAllPlaces(ctx context.Context) ([]Ad, error)
+	GetAllPlaces(ctx context.Context, filter AdFilter) ([]Ad, error)
 	GetPlaceById(ctx context.Context, adId string) (Ad, error)
 	CreatePlace(ctx context.Context, ad *Ad) error
 	SavePlace(ctx context.Context, ad *Ad) error

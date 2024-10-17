@@ -8,6 +8,7 @@ import (
 	"errors"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"time"
 )
 
 type adRepository struct {
@@ -20,11 +21,55 @@ func NewAdRepository(db *gorm.DB) domain.AdRepository {
 	}
 }
 
-func (r *adRepository) GetAllPlaces(ctx context.Context) ([]domain.Ad, error) {
+func (r *adRepository) GetAllPlaces(ctx context.Context, filter domain.AdFilter) ([]domain.Ad, error) {
 	requestID := middleware.GetRequestID(ctx)
 	logger.DBLogger.Info("GetAllPlaces called", zap.String("request_id", requestID))
 	var ads []domain.Ad
-	if err := r.db.Find(&ads).Error; err != nil {
+	query := r.db.Model(&domain.Ad{}).Joins("JOIN users ON ads.author_uuid = users.uuid")
+	if filter.Location != "" {
+		switch filter.Location {
+		case "1km":
+			query = query.Where("distance <= ?", 1)
+		case "3km":
+			query = query.Where("distance <= ?", 3)
+		case "5km":
+			query = query.Where("distance <= ?", 5)
+		case "10km":
+			query = query.Where("distance <= ?", 10)
+		}
+	}
+
+	if filter.Rating != "" {
+		query = query.Where("users.score >= ?", filter.Rating)
+	}
+
+	if filter.NewThisWeek == "true" {
+		lastWeek := time.Now().AddDate(0, 0, -7)
+		query = query.Where("publication_date >= ?", lastWeek)
+	}
+
+	if filter.HostGender != "" && filter.HostGender != "any" {
+		if filter.HostGender == "male" {
+			query = query.Where("users.sex = ?", 'M')
+		} else if filter.HostGender == "female" {
+			query = query.Where("users.sex = ?", 'F')
+		}
+	}
+
+	if filter.GuestCount != "" {
+		switch filter.GuestCount {
+		case "5":
+			query = query.Where("users.guest_count > ?", 5)
+		case "10":
+			query = query.Where("users.guest_count > ?", 10)
+		case "20":
+			query = query.Where("users.guest_count > ?", 20)
+		case "50":
+			query = query.Where("users.guest_count > ?", 50)
+		}
+	}
+
+	if err := query.Find(&ads).Error; err != nil {
 		logger.DBLogger.Error("Error fetching all places", zap.String("request_id", requestID), zap.Error(err))
 		return nil, err
 	}

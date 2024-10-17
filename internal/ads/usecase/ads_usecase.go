@@ -7,7 +7,7 @@ import (
 )
 
 type AdUseCase interface {
-	GetAllPlaces(ctx context.Context) ([]domain.Ad, error)
+	GetAllPlaces(ctx context.Context, filter domain.AdFilter) ([]domain.Ad, error)
 	GetOnePlace(ctx context.Context, adId string) (domain.Ad, error)
 	CreatePlace(ctx context.Context, place *domain.Ad) error
 	UpdatePlace(ctx context.Context, place *domain.Ad, adId string, userId string) error
@@ -25,8 +25,8 @@ func NewAdUseCase(adRepository domain.AdRepository) AdUseCase {
 	}
 }
 
-func (uc *adUseCase) GetAllPlaces(ctx context.Context) ([]domain.Ad, error) {
-	ads, err := uc.adRepository.GetAllPlaces(ctx)
+func (uc *adUseCase) GetAllPlaces(ctx context.Context, filter domain.AdFilter) ([]domain.Ad, error) {
+	ads, err := uc.adRepository.GetAllPlaces(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
