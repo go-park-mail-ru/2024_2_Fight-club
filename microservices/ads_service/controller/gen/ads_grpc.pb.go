@@ -19,14 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Ads_GetAllPlaces_FullMethodName     = "/ads.Ads/GetAllPlaces"
-	Ads_GetOnePlace_FullMethodName      = "/ads.Ads/GetOnePlace"
-	Ads_CreatePlace_FullMethodName      = "/ads.Ads/CreatePlace"
-	Ads_UpdatePlace_FullMethodName      = "/ads.Ads/UpdatePlace"
-	Ads_DeletePlace_FullMethodName      = "/ads.Ads/DeletePlace"
-	Ads_GetPlacesPerCity_FullMethodName = "/ads.Ads/GetPlacesPerCity"
-	Ads_GetUserPlaces_FullMethodName    = "/ads.Ads/GetUserPlaces"
-	Ads_DeleteAdImage_FullMethodName    = "/ads.Ads/DeleteAdImage"
+	Ads_GetAllPlaces_FullMethodName        = "/ads.Ads/GetAllPlaces"
+	Ads_GetOnePlace_FullMethodName         = "/ads.Ads/GetOnePlace"
+	Ads_CreatePlace_FullMethodName         = "/ads.Ads/CreatePlace"
+	Ads_UpdatePlace_FullMethodName         = "/ads.Ads/UpdatePlace"
+	Ads_DeletePlace_FullMethodName         = "/ads.Ads/DeletePlace"
+	Ads_GetPlacesPerCity_FullMethodName    = "/ads.Ads/GetPlacesPerCity"
+	Ads_GetUserPlaces_FullMethodName       = "/ads.Ads/GetUserPlaces"
+	Ads_DeleteAdImage_FullMethodName       = "/ads.Ads/DeleteAdImage"
+	Ads_AddToFavorites_FullMethodName      = "/ads.Ads/AddToFavorites"
+	Ads_DeleteFromFavorites_FullMethodName = "/ads.Ads/DeleteFromFavorites"
+	Ads_GetUserFavorites_FullMethodName    = "/ads.Ads/GetUserFavorites"
 )
 
 // AdsClient is the client API for Ads service.
@@ -41,6 +44,9 @@ type AdsClient interface {
 	GetPlacesPerCity(ctx context.Context, in *GetPlacesPerCityRequest, opts ...grpc.CallOption) (*GetAllAdsResponseList, error)
 	GetUserPlaces(ctx context.Context, in *GetUserPlacesRequest, opts ...grpc.CallOption) (*GetAllAdsResponseList, error)
 	DeleteAdImage(ctx context.Context, in *DeleteAdImageRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	AddToFavorites(ctx context.Context, in *AddToFavoritesRequest, opts ...grpc.CallOption) (*AdResponse, error)
+	DeleteFromFavorites(ctx context.Context, in *DeleteFromFavoritesRequest, opts ...grpc.CallOption) (*AdResponse, error)
+	GetUserFavorites(ctx context.Context, in *GetUserFavoritesRequest, opts ...grpc.CallOption) (*GetAllAdsResponseList, error)
 }
 
 type adsClient struct {
@@ -131,6 +137,36 @@ func (c *adsClient) DeleteAdImage(ctx context.Context, in *DeleteAdImageRequest,
 	return out, nil
 }
 
+func (c *adsClient) AddToFavorites(ctx context.Context, in *AddToFavoritesRequest, opts ...grpc.CallOption) (*AdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdResponse)
+	err := c.cc.Invoke(ctx, Ads_AddToFavorites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adsClient) DeleteFromFavorites(ctx context.Context, in *DeleteFromFavoritesRequest, opts ...grpc.CallOption) (*AdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdResponse)
+	err := c.cc.Invoke(ctx, Ads_DeleteFromFavorites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adsClient) GetUserFavorites(ctx context.Context, in *GetUserFavoritesRequest, opts ...grpc.CallOption) (*GetAllAdsResponseList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAllAdsResponseList)
+	err := c.cc.Invoke(ctx, Ads_GetUserFavorites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdsServer is the server API for Ads service.
 // All implementations must embed UnimplementedAdsServer
 // for forward compatibility.
@@ -143,6 +179,9 @@ type AdsServer interface {
 	GetPlacesPerCity(context.Context, *GetPlacesPerCityRequest) (*GetAllAdsResponseList, error)
 	GetUserPlaces(context.Context, *GetUserPlacesRequest) (*GetAllAdsResponseList, error)
 	DeleteAdImage(context.Context, *DeleteAdImageRequest) (*DeleteResponse, error)
+	AddToFavorites(context.Context, *AddToFavoritesRequest) (*AdResponse, error)
+	DeleteFromFavorites(context.Context, *DeleteFromFavoritesRequest) (*AdResponse, error)
+	GetUserFavorites(context.Context, *GetUserFavoritesRequest) (*GetAllAdsResponseList, error)
 	mustEmbedUnimplementedAdsServer()
 }
 
@@ -176,6 +215,15 @@ func (UnimplementedAdsServer) GetUserPlaces(context.Context, *GetUserPlacesReque
 }
 func (UnimplementedAdsServer) DeleteAdImage(context.Context, *DeleteAdImageRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAdImage not implemented")
+}
+func (UnimplementedAdsServer) AddToFavorites(context.Context, *AddToFavoritesRequest) (*AdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddToFavorites not implemented")
+}
+func (UnimplementedAdsServer) DeleteFromFavorites(context.Context, *DeleteFromFavoritesRequest) (*AdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteFromFavorites not implemented")
+}
+func (UnimplementedAdsServer) GetUserFavorites(context.Context, *GetUserFavoritesRequest) (*GetAllAdsResponseList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserFavorites not implemented")
 }
 func (UnimplementedAdsServer) mustEmbedUnimplementedAdsServer() {}
 func (UnimplementedAdsServer) testEmbeddedByValue()             {}
@@ -342,6 +390,60 @@ func _Ads_DeleteAdImage_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Ads_AddToFavorites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddToFavoritesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdsServer).AddToFavorites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Ads_AddToFavorites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdsServer).AddToFavorites(ctx, req.(*AddToFavoritesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Ads_DeleteFromFavorites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteFromFavoritesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdsServer).DeleteFromFavorites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Ads_DeleteFromFavorites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdsServer).DeleteFromFavorites(ctx, req.(*DeleteFromFavoritesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Ads_GetUserFavorites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserFavoritesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdsServer).GetUserFavorites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Ads_GetUserFavorites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdsServer).GetUserFavorites(ctx, req.(*GetUserFavoritesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Ads_ServiceDesc is the grpc.ServiceDesc for Ads service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -380,6 +482,18 @@ var Ads_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAdImage",
 			Handler:    _Ads_DeleteAdImage_Handler,
+		},
+		{
+			MethodName: "AddToFavorites",
+			Handler:    _Ads_AddToFavorites_Handler,
+		},
+		{
+			MethodName: "DeleteFromFavorites",
+			Handler:    _Ads_DeleteFromFavorites_Handler,
+		},
+		{
+			MethodName: "GetUserFavorites",
+			Handler:    _Ads_GetUserFavorites_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

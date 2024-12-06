@@ -18,6 +18,14 @@ type Ad struct {
 	Author          User      `gorm:"foreignKey:AuthorUUID;references:UUID" json:"-"`
 }
 
+type Favorites struct {
+	AdId   string `gorm:"primaryKey;column:adId" json:"adId"`
+	UserId string `gorm:"primaryKey;column:userId" json:"userId"`
+
+	User User `gorm:"foreignKey:UserId;references:UUID" json:"-"`
+	Ad   Ad   `gorm:"foreignKey:AdId;references:UUID" json:"-"`
+}
+
 type GetAllAdsResponse struct {
 	UUID            string          `gorm:"type:uuid;primaryKey;default:gen_random_uuid();column:uuid" json:"id"`
 	CityID          int             `gorm:"column:cityId;not null" json:"cityId"`
@@ -64,6 +72,7 @@ type AdFilter struct {
 	Offset      int
 	DateFrom    time.Time
 	DateTo      time.Time
+	Favorites   string
 }
 
 type AdRepository interface {
@@ -79,4 +88,7 @@ type AdRepository interface {
 	GetUserPlaces(ctx context.Context, userId string) ([]GetAllAdsResponse, error)
 	DeleteAdImage(ctx context.Context, adId string, imageId int, userId string) (string, error)
 	UpdateViewsCount(ctx context.Context, ad GetAllAdsResponse) (GetAllAdsResponse, error)
+	AddToFavorites(ctx context.Context, adId string, userId string) error
+	DeleteFromFavorites(ctx context.Context, adId string, userId string) error
+	GetUserFavorites(ctx context.Context, userId string) ([]GetAllAdsResponse, error)
 }

@@ -19,11 +19,12 @@ func SetUpRoutes(authHandler *auth.AuthHandler, adsHandler *ads.AdHandler, cityH
 	router.HandleFunc(api+"/auth/login", authHandler.LoginUser).Methods("POST")       // Login user
 	router.HandleFunc(api+"/auth/logout", authHandler.LogoutUser).Methods("DELETE")   // Logout user
 	// User Management Routes
-	router.HandleFunc(api+"/users", authHandler.PutUser).Methods("PUT")                       // Update user
-	router.HandleFunc(api+"/users/{userId}", authHandler.GetUserById).Methods("GET")          // Get user by ID
-	router.HandleFunc(api+"/users", authHandler.GetAllUsers).Methods("GET")                   // Get all users
-	router.HandleFunc(api+"/session", authHandler.GetSessionData).Methods("GET")              // Get session data
-	router.HandleFunc(api+"/users/{userId}/housing", adsHandler.GetUserPlaces).Methods("GET") // Get User Ads
+	router.HandleFunc(api+"/users", authHandler.PutUser).Methods("PUT")                            // Update user
+	router.HandleFunc(api+"/users/{userId}", authHandler.GetUserById).Methods("GET")               // Get user by ID
+	router.HandleFunc(api+"/users", authHandler.GetAllUsers).Methods("GET")                        // Get all users
+	router.HandleFunc(api+"/session", authHandler.GetSessionData).Methods("GET")                   // Get session data
+	router.HandleFunc(api+"/users/{userId}/housing", adsHandler.GetUserPlaces).Methods("GET")      // Get User Ads
+	router.HandleFunc(api+"/users/{userId}/favorites", adsHandler.GetUserFavorites).Methods("GET") // Get User Favorites
 	// Ad Management Routes
 	router.HandleFunc(api+"/housing", adsHandler.GetAllPlaces).Methods("GET")                             // Get all ads
 	router.HandleFunc(api+"/housing/{adId}", adsHandler.GetOnePlace).Methods("GET")                       // Get ad by ID
@@ -32,6 +33,8 @@ func SetUpRoutes(authHandler *auth.AuthHandler, adsHandler *ads.AdHandler, cityH
 	router.HandleFunc(api+"/housing/{adId}", adsHandler.DeletePlace).Methods("DELETE")                    // Delete ad by ID
 	router.HandleFunc(api+"/housing/cities/{city}", adsHandler.GetPlacesPerCity).Methods("GET")           // Get ads by city
 	router.HandleFunc(api+"/housing/{adId}/images/{imageId}", adsHandler.DeleteAdImage).Methods("DELETE") // Delete image from ad
+	router.HandleFunc(api+"/housing/{adId}/like", adsHandler.AddToFavorites).Methods("POST")              // Add to favorites
+	router.HandleFunc(api+"/housing/{adId}/dislike", adsHandler.DeleteFromFavorites).Methods("POST")      // Delete from favorites
 	// CSRF Token Route
 	router.HandleFunc(api+"/csrf/refresh", authHandler.RefreshCsrfToken).Methods("GET") // Refresh CSRF token
 	// City Management Routes

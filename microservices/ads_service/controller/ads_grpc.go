@@ -459,6 +459,151 @@ func (adh *GrpcAdHandler) DeleteAdImage(ctx context.Context, in *gen.DeleteAdIma
 	return &gen.DeleteResponse{Response: "Delete image successfully"}, nil
 }
 
+func (adh *GrpcAdHandler) AddToFavorites(ctx context.Context, in *gen.AddToFavoritesRequest) (*gen.AdResponse, error) {
+	requestID := middleware.GetRequestID(ctx)
+	sanitizer := bluemonday.UGCPolicy()
+	logger.AccessLogger.Info("Received AddToFavorites request in microservice",
+		zap.String("request_id", requestID),
+	)
+
+	in.AdId = sanitizer.Sanitize(in.AdId)
+
+	if in.AuthHeader == "" {
+		logger.AccessLogger.Warn("Missing X-CSRF-Token header",
+			zap.String("request_id", requestID),
+			zap.Error(errors.New("missing X-CSRF-Token header")),
+		)
+		return nil, errors.New("missing X-CSRF-Token header")
+	}
+
+	tokenString := in.AuthHeader[len("Bearer "):]
+	_, err := adh.jwtToken.Validate(tokenString, in.SessionID)
+	if err != nil {
+		logger.AccessLogger.Warn("Invalid JWT token", zap.String("request_id", requestID), zap.Error(err))
+		return nil, errors.New("invalid JWT token")
+	}
+
+	userID, err := adh.sessionService.GetUserID(ctx, in.SessionID)
+	if err != nil {
+		logger.AccessLogger.Warn("No active session", zap.String("request_id", requestID))
+		return nil, errors.New("no active session")
+	}
+
+	err = adh.usecase.AddToFavorites(ctx, in.AdId, userID)
+	if err != nil {
+		logger.AccessLogger.Warn("Failed to add ad to favorites", zap.String("request_id", requestID), zap.Error(err))
+		return nil, err
+	}
+	return &gen.AdResponse{Response: "Add to favorites successfully"}, nil
+}
+
+func (adh *GrpcAdHandler) DeleteFromFavorites(ctx context.Context, in *gen.DeleteFromFavoritesRequest) (*gen.AdResponse, error) {
+	requestID := middleware.GetRequestID(ctx)
+	sanitizer := bluemonday.UGCPolicy()
+	logger.AccessLogger.Info("Received DeleteFromFavorites request in microservice",
+		zap.String("request_id", requestID),
+	)
+
+	in.AdId = sanitizer.Sanitize(in.AdId)
+
+	if in.AuthHeader == "" {
+		logger.AccessLogger.Warn("Missing X-CSRF-Token header",
+			zap.String("request_id", requestID),
+			zap.Error(errors.New("missing X-CSRF-Token header")),
+		)
+		return nil, errors.New("missing X-CSRF-Token header")
+	}
+
+	tokenString := in.AuthHeader[len("Bearer "):]
+	_, err := adh.jwtToken.Validate(tokenString, in.SessionID)
+	if err != nil {
+		logger.AccessLogger.Warn("Invalid JWT token", zap.String("request_id", requestID), zap.Error(err))
+		return nil, errors.New("invalid JWT token")
+	}
+
+	userID, err := adh.sessionService.GetUserID(ctx, in.SessionID)
+	if err != nil {
+		logger.AccessLogger.Warn("No active session", zap.String("request_id", requestID))
+		return nil, errors.New("no active session")
+	}
+
+	err = adh.usecase.DeleteFromFavorites(ctx, in.AdId, userID)
+	if err != nil {
+		logger.AccessLogger.Warn("Failed to delete ad from favorites", zap.String("request_id", requestID), zap.Error(err))
+		return nil, err
+	}
+	return &gen.AdResponse{Response: "Delete ad from favorites successfully"}, nil
+}
+
+func (adh *GrpcAdHandler) GetUserFavorites(ctx context.Context, in *gen.GetUserFavoritesRequest) (*gen.GetAllAdsResponseList, error) {
+	requestID := middleware.GetRequestID(ctx)
+	sanitizer := bluemonday.UGCPolicy()
+	logger.AccessLogger.Info("Received DeleteFromFavorites request in microservice",
+		zap.String("request_id", requestID),
+	)
+	layout := "2006-01-02"
+	in.UserId = sanitizer.Sanitize(in.UserId)
+
+	if in.AuthHeader == "" {
+		logger.AccessLogger.Warn("Missing X-CSRF-Token header",
+			zap.String("request_id", requestID),
+			zap.Error(errors.New("missing X-CSRF-Token header")),
+		)
+		return nil, errors.New("missing X-CSRF-Token header")
+	}
+
+	tokenString := in.AuthHeader[len("Bearer "):]
+	_, err := adh.jwtToken.Validate(tokenString, in.SessionID)
+	if err != nil {
+		logger.AccessLogger.Warn("Invalid JWT token", zap.String("request_id", requestID), zap.Error(err))
+		return nil, errors.New("invalid JWT token")
+	}
+
+	userID, err := adh.sessionService.GetUserID(ctx, in.SessionID)
+	if err != nil {
+		logger.AccessLogger.Warn("No active session", zap.String("request_id", requestID))
+		return nil, errors.New("no active session")
+	}
+	if userID != in.UserId {
+		logger.AccessLogger.Warn("cant access other user favorites", zap.String("request_id", requestID), zap.Error(err))
+		return nil, errors.New("cant access other user favorites")
+	}
+	places, err := adh.usecase.GetUserFavorites(ctx, in.UserId)
+	if err != nil {
+		logger.AccessLogger.Warn("Failed to get user favorites", zap.String("request_id", requestID), zap.Error(err))
+		return nil, err
+	}
+	var responseList gen.GetAllAdsResponseList
+	for _, place := range places {
+		ad := &gen.GetAllAdsResponse{
+			Id:              place.UUID,
+			CityId:          int32(place.CityID),
+			AuthorUUID:      place.AuthorUUID,
+			Address:         place.Address,
+			PublicationDate: place.PublicationDate.Format(layout),
+			Description:     place.Description,
+			RoomsNumber:     int32(place.RoomsNumber),
+			ViewsCount:      int32Ptr(int32(place.ViewsCount)),
+			CityName:        place.CityName,
+			AdDateFrom:      place.AdDateFrom.Format(layout),
+			AdDateTo:        place.AdDateTo.Format(layout),
+			AdAuthor: &gen.UserResponse{
+				Rating:     float32Ptr(float32(place.AdAuthor.Rating)),
+				Avatar:     place.AdAuthor.Avatar,
+				Name:       place.AdAuthor.Name,
+				GuestCount: int32Ptr(int32(place.AdAuthor.GuestCount)),
+				Sex:        place.AdAuthor.Sex,
+				BirthDate:  place.AdAuthor.Birthdate.Format(layout),
+			},
+			Images: convertImagesToGRPC(place.Images),
+		}
+		responseList.Housing = append(responseList.Housing, ad)
+	}
+
+	logger.AccessLogger.Info("Successfully fetched all favorites", zap.String("request_id", requestID), zap.Int("count", len(places)))
+	return &responseList, nil
+}
+
 func float32Ptr(f float32) *float32 {
 	return &f
 }

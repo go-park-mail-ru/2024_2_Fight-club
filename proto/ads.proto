@@ -14,6 +14,9 @@ service Ads {
   rpc GetPlacesPerCity (GetPlacesPerCityRequest) returns (GetAllAdsResponseList);
   rpc GetUserPlaces (GetUserPlacesRequest) returns (GetAllAdsResponseList);
   rpc DeleteAdImage (DeleteAdImageRequest) returns (DeleteResponse);
+  rpc AddToFavorites (AddToFavoritesRequest) returns (AdResponse);
+  rpc DeleteFromFavorites (DeleteFromFavoritesRequest) returns (AdResponse);
+  rpc GetUserFavorites (GetUserFavoritesRequest) returns (GetAllAdsResponseList);
 }
 
 message Ad {
@@ -55,6 +58,24 @@ message UpdateAdRequest {
 
 message DeletePlaceRequest {
   string adId = 1;
+  string authHeader = 2;
+  string sessionID = 3;
+}
+
+message AddToFavoritesRequest {
+  string adId = 1;
+  string authHeader = 2;
+  string sessionID = 3;
+}
+
+message DeleteFromFavoritesRequest {
+  string adId = 1;
+  string authHeader = 2;
+  string sessionID = 3;
+}
+
+message GetUserFavoritesRequest {
+  string userId = 1;
   string authHeader = 2;
   string sessionID = 3;
 }

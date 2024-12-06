@@ -595,3 +595,128 @@ func (r *adRepository) DeleteAdImage(ctx context.Context, adId string, imageId i
 	logger.DBLogger.Info("Image deleted successfully", zap.Int("image_id", imageId), zap.String("ad_id", adId), zap.String("request_id", requestID))
 	return image.ImageUrl, nil
 }
+
+func (r *adRepository) AddToFavorites(ctx context.Context, adId string, userId string) error {
+	start := time.Now()
+	requestID := middleware.GetRequestID(ctx)
+	logger.DBLogger.Info("AddToFavorites called", zap.String("ad", adId), zap.String("request_id", requestID))
+	var err error
+	defer func() {
+		if err != nil {
+			metrics.RepoErrorsTotal.WithLabelValues("AddToFavorites", "error", err.Error()).Inc()
+		} else {
+			metrics.RepoRequestTotal.WithLabelValues("AddToFavorites", "success").Inc()
+		}
+		duration := time.Since(start).Seconds()
+		metrics.RepoRequestDuration.WithLabelValues("AddToFavorites").Observe(duration)
+	}()
+	var ad domain.Ad
+	if err := r.db.First(&ad, "uuid = ?", adId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("ad not found")
+		}
+		return errors.New("error fetching ad")
+	}
+
+	var favorite domain.Favorites
+	favorite.AdId = adId
+	favorite.UserId = userId
+	if err := r.db.Create(&favorite).Error; err != nil {
+		return errors.New("error create favorite")
+	}
+
+	logger.DBLogger.Info("Favorite create successfully", zap.String("ad_id", adId), zap.String("request_id", requestID))
+	return nil
+}
+
+func (r *adRepository) DeleteFromFavorites(ctx context.Context, adId string, userId string) error {
+	start := time.Now()
+	requestID := middleware.GetRequestID(ctx)
+	logger.DBLogger.Info("AddToFavorites called", zap.String("ad", adId), zap.String("request_id", requestID))
+	var err error
+	defer func() {
+		if err != nil {
+			metrics.RepoErrorsTotal.WithLabelValues("AddToFavorites", "error", err.Error()).Inc()
+		} else {
+			metrics.RepoRequestTotal.WithLabelValues("AddToFavorites", "success").Inc()
+		}
+		duration := time.Since(start).Seconds()
+		metrics.RepoRequestDuration.WithLabelValues("AddToFavorites").Observe(duration)
+	}()
+	var ad domain.Ad
+	if err := r.db.First(&ad, "uuid = ?", adId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("ad not found")
+		}
+		return errors.New("error fetching ad")
+	}
+
+	var favorite domain.Favorites
+	favorite.AdId = adId
+	favorite.UserId = userId
+	if err := r.db.Delete(&favorite).Error; err != nil {
+		return errors.New("error create favorite")
+	}
+
+	logger.DBLogger.Info("Favorite create successfully", zap.String("ad_id", adId), zap.String("request_id", requestID))
+	return nil
+}
+
+func (r *adRepository) GetUserFavorites(ctx context.Context, userId string) ([]domain.GetAllAdsResponse, error) {
+	start := time.Now()
+	requestID := middleware.GetRequestID(ctx)
+	logger.DBLogger.Info("GetUserFavorites called", zap.String("user", userId), zap.String("request_id", requestID))
+	var err error
+	defer func() {
+		if err != nil {
+			metrics.RepoErrorsTotal.WithLabelValues("GetUserFavorites", "error", err.Error()).Inc()
+		} else {
+			metrics.RepoRequestTotal.WithLabelValues("GetUserFavorites", "success").Inc()
+		}
+		duration := time.Since(start).Seconds()
+		metrics.RepoRequestDuration.WithLabelValues("GetUserFavorites").Observe(duration)
+	}()
+	var ads []domain.GetAllAdsResponse
+
+	query := r.db.Model(&domain.Ad{}).
+		Joins("JOIN favorites ON favorites.\"adId\" = ads.uuid").
+		Where("favorites.\"userId\" = ?", userId).
+		Select("ads.*, favorites.\"userId\" AS \"FavoriteUserId\"")
+
+	if err := query.Find(&ads).Error; err != nil {
+		logger.DBLogger.Error("Error fetching user favorites", zap.String("request_id", requestID), zap.Error(err))
+		return nil, errors.New("error fetching user favorites")
+	}
+
+	for i, ad := range ads {
+		var images []domain.Image
+		var user domain.User
+		err := r.db.Model(&domain.Image{}).Where("\"adId\" = ?", ad.UUID).Find(&images).Error
+		if err != nil {
+			logger.DBLogger.Error("Error fetching images for ad", zap.String("request_id", requestID), zap.Error(err))
+			return nil, errors.New("error fetching images for ad")
+		}
+
+		err = r.db.Model(&domain.User{}).Where("uuid = ?", ad.AuthorUUID).Find(&user).Error
+		if err != nil {
+			logger.DBLogger.Error("Error fetching user", zap.String("request_id", requestID), zap.Error(err))
+			return nil, errors.New("error fetching user")
+		}
+		ads[i].AdAuthor.Name = user.Name
+		ads[i].AdAuthor.Avatar = user.Avatar
+		ads[i].AdAuthor.Rating = user.Score
+		ads[i].AdAuthor.GuestCount = user.GuestCount
+		ads[i].AdAuthor.Sex = user.Sex
+		ads[i].AdAuthor.Birthdate = user.Birthdate
+		for _, img := range images {
+			ads[i].Images = append(ads[i].Images, domain.ImageResponse{
+				ID:        img.ID,
+				ImagePath: img.ImageUrl,
+			})
+		}
+	}
+
+	logger.DBLogger.Info("Successfully fetched user favorites", zap.String("request_id", requestID), zap.Int("count", len(ads)))
+
+	return ads, nil
+}
